@@ -280,6 +280,14 @@
                 }
 
                 GameState.currentRoom = snapshot.val();
+                console.log('Room updated:', GameState.currentRoom);
+                
+                // ถ้าเกมเริ่มแล้ว และยังอยู่หน้า lobby ให้เปลี่ยนไปหน้าเกม
+                if (GameState.currentRoom.status === 'playing' && GameState.currentScreen === 'lobby') {
+                    console.log('Game started! Moving to game screen');
+                    showScreen('game');
+                    showMessage('เกมเริ่มแล้ว!', 'success');
+                }
                 
                 if (GameState.currentScreen === 'lobby') {
                     updateLobby();
@@ -289,32 +297,53 @@
             });
         }
 
-        // Start Game
+        // Start Game (ทุกคนกดได้)
         window.startGame = async function() {
-            if (!GameState.isHost) {
-                showMessage('เฉพาะ Host เท่านั้น', 'error');
-                return;
-            }
-
+            console.log('=== START GAME CLICKED ===');
+            console.log('Room Code:', GameState.roomCode);
+            console.log('Player ID:', GameState.playerId);
+            console.log('Current Room:', GameState.currentRoom);
+            
             const players = Object.keys(GameState.currentRoom.players);
+            console.log('Players:', players);
+            
             if (players.length < 2) {
                 showMessage('ต้องมีผู้เล่น 2 คนขึ้นไป', 'error');
                 return;
             }
+            
+            // ถ้าเกมเริ่มแล้ว ให้เข้าหน้าเกมเลย
+            if (GameState.currentRoom.status === 'playing') {
+                console.log('Game already playing, going to game screen');
+                showScreen('game');
+                return;
+            }
 
-            await update(ref(database, `rooms/${GameState.roomCode}`), {
-                status: 'playing'
-            });
+            try {
+                console.log('Updating status to playing...');
+                await update(ref(database, `rooms/${GameState.roomCode}`), {
+                    status: 'playing'
+                });
+                console.log('✅ Status updated');
 
-            await update(ref(database, `rooms/${GameState.roomCode}/game`), {
-                started: true,
-                currentTurn: 0,
-                turnPlayerId: players[0],
-                round: 1
-            });
+                console.log('Updating game state...');
+                await update(ref(database, `rooms/${GameState.roomCode}/game`), {
+                    started: true,
+                    currentTurn: 0,
+                    turnPlayerId: players[0],
+                    round: 1
+                });
+                console.log('✅ Game state updated');
 
-            showScreen('game');
-            showMessage('เกมเริ่มแล้ว!', 'success');
+                console.log('Changing to game screen...');
+                showScreen('game');
+                console.log('✅ Screen changed');
+                
+                showMessage('เกมเริ่มแล้ว!', 'success');
+            } catch (error) {
+                console.error('❌ Error:', error);
+                showMessage('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
         };
 
         // Roll Dice with animation
@@ -689,12 +718,8 @@
             `).join('');
 
             const startBtn = document.getElementById('start-btn');
-            if (GameState.isHost) {
-                startBtn.classList.remove('hidden');
-                startBtn.disabled = Object.keys(players).length < 2;
-            } else {
-                startBtn.classList.add('hidden');
-            }
+            startBtn.classList.remove('hidden');
+            startBtn.disabled = Object.keys(players).length < 2;
         }
 
         // Update Game
@@ -1047,4 +1072,4 @@
     </div>
 
 </body>
-    </html>
+</html>
