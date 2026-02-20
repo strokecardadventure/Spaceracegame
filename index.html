@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>TERRA × COSMOS — Multiplayer</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Mitr:wght@300;400;600&display=swap" rel="stylesheet">
+
+<!-- Firebase -->
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, onValue, update, remove, push, serverTimestamp, off }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDGAXmqmbn4fV47eNXa8PSP4N_hIWxmsuE",
+  authDomain: "space-race-game-d20ad.firebaseapp.com",
+  databaseURL: "https://space-race-game-d20ad-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "space-race-game-d20ad",
+  storageBucket: "space-race-game-d20ad.firebasestorage.app",
+  messagingSenderId: "691384338211",
+  appId: "1:691384338211:web:f17b92c8ff574daa012e96",
+  measurementId: "G-0YV3DXD5RM"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
+// ─── DATA ──────────────────────────────────────────────────────────────────
+const ITEMS = [
+  {icon:'🌀',name:'เอลนีโญ',hint:'El Niño',zone:'earth',fact:'การอุ่นผิดปกติของน้ำแปซิฟิกตะวันออก เกิดในมหาสมุทรโลก'},
+  {icon:'🌊',name:'ลานีญา',hint:'La Niña',zone:'earth',fact:'น้ำแปซิฟิกตะวันตกอุ่นผิดปกติ เกิดในมหาสมุทรโลก'},
+  {icon:'🧫',name:'Tardigrade',hint:'สัตว์ 8 ขาตัวจิ๋วทนทุกอย่าง',zone:'earth',fact:'สัตว์จิ๋วบนโลกที่ทนสุญญากาศและรังสีได้ แต่อาศัยบนโลก'},
+  {icon:'🦠',name:'Archaea',hint:'จุลินทรีย์โบราณสุดขีด',zone:'earth',fact:'สิ่งมีชีวิตในสภาพแวดล้อมรุนแรงบนโลก เช่น ปล่องน้ำร้อน'},
+  {icon:'🌋',name:'Subduction Zone',hint:'แผ่นเปลือกโลกจมลง',zone:'earth',fact:'เขตมุดตัวของเปลือกโลก เกิดแผ่นดินไหวและภูเขาไฟ'},
+  {icon:'💧',name:'Halocline',hint:'ชั้นน้ำทะเลที่ความเค็มเปลี่ยนฉับพลัน',zone:'earth',fact:'ชั้นในมหาสมุทรที่ความเค็มเปลี่ยนแปลงอย่างรวดเร็วตามความลึก'},
+  {icon:'💧',name:'Thermocline',hint:'ชั้นน้ำอุณหภูมิเปลี่ยนฉับพลัน',zone:'earth',fact:'ชั้นมหาสมุทรที่อุณหภูมิลดฮวบ เกิดในทะเลลึกบนโลก'},
+  {icon:'🌀',name:'Polar Vortex',hint:'วังวนลมเย็นจัดขั้วโลก',zone:'earth',fact:'ระบบลมพายุหมุนรอบขั้วโลกในชั้นบรรยากาศโลก'},
+  {icon:'🌱',name:'Chemosynthesis',hint:'สังเคราะห์พลังงานจากเคมีไม่ใช่แสง',zone:'earth',fact:'แบคทีเรียใต้ทะเลลึกใช้สารเคมีแทนแสงอาทิตย์ พบที่ปล่องน้ำร้อน'},
+  {icon:'🏔️',name:'Isostasy',hint:'สมดุลเปลือกโลกใน mantle',zone:'earth',fact:'สมดุลของเปลือกโลกที่ลอยบนชั้น mantle เหลว'},
+  {icon:'🔥',name:'Kimberlite',hint:'หินแมกมาพาเพชรขึ้นมา',zone:'earth',fact:'หินภูเขาไฟจากความลึก 200 กม. พาเพชรขึ้นมายังผิวโลก'},
+  {icon:'🧊',name:'Permafrost',hint:'ดินแข็งตลอดปีในเขตหนาว',zone:'earth',fact:'ดินแช่แข็งถาวรใต้พื้นผิวในเขตอาร์กติกและแอนตาร์กติกา'},
+  {icon:'💨',name:'Jet Stream',hint:'กระแสลมความเร็วสูงในบรรยากาศ',zone:'earth',fact:'ลมแรงในชั้น tropopause โลก ความเร็ว 100-400 กม./ชม.'},
+  {icon:'🌈',name:'Bioluminescence',hint:'สิ่งมีชีวิตเรืองแสงได้',zone:'earth',fact:'แมงกะพรุน หิ่งห้อย ปลาทะเลลึก ล้วนเรืองแสงบนโลก'},
+  {icon:'🫧',name:'Methane Hydrate',hint:'ก๊าซแช่แข็งใต้ทะเลลึก',zone:'earth',fact:'น้ำแข็งที่กักเก็บก๊าซมีเทนอยู่ใต้ทะเลลึกและขั้วโลก'},
+  {icon:'🌀',name:'ENSO Cycle',hint:'วงจรอากาศมหาสมุทรแปซิฟิก',zone:'earth',fact:'El Niño-Southern Oscillation วงจรอากาศ-มหาสมุทรบนโลก'},
+  {icon:'🌪️',name:'Atmospheric River',hint:'แม่น้ำในชั้นบรรยากาศ',zone:'earth',fact:'กระแสไอน้ำในบรรยากาศโลกที่พาฝนมหาศาล เช่น Pineapple Express'},
+  {icon:'⚡',name:'Ball Lightning',hint:'ฟ้าผ่าทรงกลมลึกลับ',zone:'earth',fact:'ปรากฏการณ์ลึกลับในชั้นบรรยากาศโลก ยังไม่ทราบสาเหตุแน่ชัด'},
+  {icon:'🌊',name:'Rogue Wave',hint:'คลื่นยักษ์ผิดปกติกลางทะเล',zone:'earth',fact:'คลื่นทะเลสูง 25+ เมตรที่เกิดขึ้นโดยไม่คาดหมายกลางมหาสมุทร'},
+  {icon:'🧲',name:'Magnetosphere',hint:'สนามแม่เหล็กห่อหุ้มโลก',zone:'earth',fact:'สนามแม่เหล็กของโลกที่ป้องกันรังสีจากดวงอาทิตย์'},
+  {icon:'🌀',name:'Coriolis Effect',hint:'แรงที่ทำให้พายุหมุนกลม',zone:'earth',fact:'เกิดจากการหมุนของโลก ทำให้ลมและกระแสน้ำหมุนทิศต่างกัน'},
+  {icon:'💡',name:'Aurora Borealis',hint:'แสงเหนือ',zone:'earth',fact:'เกิดในบรรยากาศโลก จากอนุภาคพลังงานจากดวงอาทิตย์ชนก๊าซ'},
+  {icon:'🔥',name:'Volcanic Lightning',hint:'ฟ้าผ่าในเมฆควันภูเขาไฟ',zone:'earth',fact:'เกิดในกลุ่มเถ้าถ่านภูเขาไฟ จากการสะสมประจุไฟฟ้าสถิต'},
+  {icon:'🐍',name:'Mycorrhizal Network',hint:'เครือข่ายเชื้อราใต้ดิน',zone:'earth',fact:'เส้นใยเชื้อราเชื่อมรากต้นไม้ ใช้แลกเปลี่ยนสารอาหารกัน'},
+  {icon:'🌊',name:'Turbidite',hint:'ตะกอนใต้น้ำไหลหนาแน่น',zone:'earth',fact:'กระแสตะกอนใต้น้ำที่ไหลเร็วจมลงไปก้นทะเล'},
+  {icon:'🕳️',name:'Quasar',hint:'สิ่งที่สว่างที่สุดในจักรวาล',zone:'space',fact:'นิวเคลียสกาแล็กซีสว่างมาก พลังงานจากหลุมดำมวลยิ่งยวดกลืนสสาร'},
+  {icon:'💫',name:'Magnetar',hint:'ดาวนิวตรอนสนามแม่เหล็กสูงสุด',zone:'space',fact:'ดาวนิวตรอนที่มีสนามแม่เหล็กแรงที่สุดในจักรวาล แรงกว่าโลก 1 ล้านล้านเท่า'},
+  {icon:'☄️',name:'Oort Cloud',hint:'เมฆดาวหางห่างไกลสุด',zone:'space',fact:'ชั้นนอกสุดของระบบสุริยะ อยู่ห่าง 2,000-100,000 AU แหล่งกำเนิดดาวหาง'},
+  {icon:'🌀',name:'Accretion Disk',hint:'จานสสารรอบหลุมดำ',zone:'space',fact:'จานสสารที่วนรอบหลุมดำ ร้อนมากจนเปล่งแสงเอ็กซ์เรย์'},
+  {icon:'🔭',name:'Wolf-Rayet Star',hint:'ดาวฤกษ์ใกล้สิ้นอายุขัย',zone:'space',fact:'ดาวฤกษ์มหึมาที่พ่นชั้นนอกออกมาก่อนระเบิด Supernova'},
+  {icon:'🌌',name:'Interstellar Medium',hint:'สสารระหว่างดาว',zone:'space',fact:'ก๊าซและฝุ่นที่เติมเต็มพื้นที่ระหว่างดาวในกาแล็กซี'},
+  {icon:'⚡',name:'Gamma-Ray Burst',hint:'การระเบิดพลังงานสูงสุดในจักรวาล',zone:'space',fact:'การระเบิดรุนแรงที่สุด เกิดจากดาวระเบิด hypernova หรือดาวนิวตรอนชนกัน'},
+  {icon:'🌀',name:'Pulsar',hint:'ดาวนิวตรอนที่ปล่อยคลื่นวิทยุเป็นจังหวะ',zone:'space',fact:'ดาวนิวตรอนหมุนเร็วที่ปล่อยลำแสงคลื่นวิทยุสม่ำเสมอ'},
+  {icon:'🌊',name:'Gravitational Wave',hint:'คลื่นในผืนกาลอวกาศ',zone:'space',fact:'คลื่นในโครงสร้างกาลอวกาศ เกิดจากการชนของหลุมดำหรือดาวนิวตรอน'},
+  {icon:'❄️',name:'Cosmic Microwave Background',hint:'สะท้อนจาก Big Bang',zone:'space',fact:'รังสีไมโครเวฟที่เหลือจาก Big Bang เมื่อ 380,000 ปีหลังกำเนิดจักรวาล'},
+  {icon:'🪐',name:'Roche Limit',hint:'ระยะที่ดาวบริวารถูกแรงน้ำขึ้นลงทำลาย',zone:'space',fact:'ระยะห่างขั้นต่ำที่ดวงจันทร์ไม่ถูกแรงน้ำขึ้นลงฉีกทำลาย'},
+  {icon:'🌑',name:'Dark Matter',hint:'สสารมืดที่ดึงดูดแต่ไม่เปล่งแสง',zone:'space',fact:'สสารที่มีแรงโน้มถ่วงแต่ไม่มีปฏิสัมพันธ์กับแสง ~27% ของจักรวาล'},
+  {icon:'⚫',name:'Spaghettification',hint:'ยืดเป็นเส้นสปาเก็ตตี้ใกล้หลุมดำ',zone:'space',fact:'แรงโน้มถ่วงต่างกันมากทำให้สสารยืดออกเป็นเส้น'},
+  {icon:'🌌',name:'Laniakea Supercluster',hint:'กลุ่มซุปเปอร์คลัสเตอร์ที่โลกอยู่',zone:'space',fact:'ซุปเปอร์คลัสเตอร์กาแล็กซีที่ทางช้างเผือกเป็นสมาชิก ขนาด 520 ล้านปีแสง'},
+  {icon:'🔮',name:'Hawking Radiation',hint:'รังสีจากหลุมดำตามทฤษฎีฮอว์กิ้ง',zone:'space',fact:'รังสีที่ทฤษฎีทำนายว่าหลุมดำปล่อยออกมา ทำให้ระเหยหายในระยะยาว'},
+  {icon:'🌠',name:'Trojan Asteroid',hint:'ดาวเคราะห์น้อยในจุด Lagrange',zone:'space',fact:'กลุ่มดาวเคราะห์น้อยที่อยู่ในจุด Lagrange ของดาวพฤหัสบดี'},
+  {icon:'💥',name:'Hypernova',hint:'Supernova แต่รุนแรง 100 เท่า',zone:'space',fact:'การระเบิดของดาวฤกษ์มวลมากพิเศษ รุนแรงกว่า Supernova มาก'},
+  {icon:'🔵',name:'Blazar',hint:'Quasar ที่ jet ยิงตรงมาหาเรา',zone:'space',fact:'Quasar ที่ jet พลังงานสูงยิงตรงมาทิศทางโลก ดูสว่างผิดปกติ'},
+  {icon:'🌑',name:'Exoplanet',hint:'ดาวเคราะห์นอกระบบสุริยะ',zone:'space',fact:'ดาวเคราะห์ที่โคจรรอบดาวฤกษ์ดวงอื่น ไม่ใช่ดวงอาทิตย์ของเรา'},
+  {icon:'💨',name:'Solar Wind',hint:'ลมจากดวงอาทิตย์',zone:'space',fact:'อนุภาคที่พ่นออกจากดวงอาทิตย์ ไหลออกสู่อวกาศ'},
+  {icon:'🌀',name:'Void / Supervoid',hint:'พื้นที่ว่างเปล่าในจักรวาล',zone:'space',fact:'บริเวณในจักรวาลที่แทบไม่มีกาแล็กซีอยู่เลย ใหญ่กว่า 300 ล้านปีแสง'},
+  {icon:'🪨',name:'Chondrule',hint:'เม็ดหินกลมในอุกกาบาต',zone:'space',fact:'เม็ดหินกลมจิ๋วในอุกกาบาต เกิดจากการหลอมเร็วในเนบิวลายุคแรก'},
+  {icon:'🧊',name:'Kuiper Belt Object',hint:'วัตถุในแถบไคเปอร์',zone:'space',fact:'วัตถุหลังดาวเนปจูน ระยะ 30-50 AU รวมถึงพลูโตด้วย'},
+  {icon:'⚛️',name:'Nucleosynthesis',hint:'การสร้างธาตุในดาวฤกษ์',zone:'space',fact:'กระบวนการสร้างธาตุหนักในแกนดาวฤกษ์และระหว่าง Supernova'},
+  {icon:'🌊',name:'Tidal Locking',hint:'ดวงจันทร์หันหน้าด้านเดิมหาโลก',zone:'space',fact:'ดวงจันทร์หมุนรอบตัวเองช้าพอดีกับที่โคจรรอบโลก'},
+];
+
+const POWER_UPS = [
+  {id:'freeze',icon:'🧊',name:'ฟรีซ',desc:'หยุดเวลาคนอื่น 3 วิ',color:'#4dd9f0'},
+  {id:'swap',icon:'🔄',name:'สลับ',desc:'สลับปุ่มคนอื่น 1 ข้อ',color:'#f1c40f'},
+  {id:'blind',icon:'👁️',name:'บอด',desc:'ซ่อนชื่อโจทย์คนอื่น 1 ข้อ',color:'#e74c3c'},
+];
+
+// ─── STATE ─────────────────────────────────────────────────────────────────
+let myId = 'p_' + Math.random().toString(36).slice(2,8);
+let myName = '';
+let roomCode = '';
+let isHost = false;
+let roomRef = null;
+let listeners = [];
+let gameQueue = [];
+let currentRound = 0;
+let myScore = 0;
+let myPowerUps = {freeze:1, swap:1, blind:1};
+let roundAnswered = false;
+let transitioning = false;
+let frozenUntil = 0;
+let swappedThisRound = false;
+let blindThisRound = false;
+let timerInt = null;
+let timeLeft = 8;
+let confettiInterval = null;
+
+const TOTAL_ROUNDS = 15;
+
+// ─── HELPERS ───────────────────────────────────────────────────────────────
+function shuffle(a){return [...a].sort(()=>Math.random()-.5)}
+function genCode(){return Math.floor(1000+Math.random()*9000).toString()}
+
+function listenDb(path, cb){
+  const r = ref(db, path);
+  onValue(r, cb);
+  listeners.push({ref:r, cb});
+  return r;
+}
+function stopListeners(){
+  listeners.forEach(l => off(l.ref, 'value', l.cb));
+  listeners = [];
+}
+
+// ─── UI HELPERS ────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+function show(id){ $(id).style.display = 'flex' }
+function hide(id){ $(id).style.display = 'none' }
+function setScreen(s){
+  ['screen-home','screen-lobby','screen-game','screen-result'].forEach(x => hide(x));
+  show('screen-'+s);
+}
+
+function showToast(msg, color='#fff', dur=2200){
+  const t = $('toast');
+  t.textContent = msg;
+  t.style.color = color;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), dur);
+}
+
+function spawnParticles(x,y,color){
+  for(let i=0;i<12;i++){
+    const p=document.createElement('div');
+    p.className='particle';
+    const angle=(i/12)*Math.PI*2, dist=45+Math.random()*55;
+    p.style.cssText=`left:${x}px;top:${y}px;width:${5+Math.random()*7}px;
+      height:${5+Math.random()*7}px;background:${color};
+      --tx:${Math.cos(angle)*dist}px;--ty:${Math.sin(angle)*dist}px;`;
+    document.body.appendChild(p);
+    setTimeout(()=>p.remove(),900);
+  }
+}
+
+// ─── CANVAS STARS ──────────────────────────────────────────────────────────
+const canvas = $('stars');
+const ctx = canvas.getContext('2d');
+let stars=[];
+function initStars(){
+  canvas.width=innerWidth; canvas.height=innerHeight;
+  stars=Array.from({length:160},()=>({
+    x:Math.random()*innerWidth, y:Math.random()*innerHeight,
+    r:Math.random()*1.4+.3, a:Math.random(), da:(Math.random()-.5)*.007
+  }));
+}
+function drawStars(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  stars.forEach(s=>{
+    s.a=Math.max(.05,Math.min(1,s.a+s.da));
+    if(s.a<=.05||s.a>=1) s.da*=-1;
+    ctx.globalAlpha=s.a; ctx.fillStyle='white';
+    ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
+  });
+  ctx.globalAlpha=1; requestAnimationFrame(drawStars);
+}
+initStars(); drawStars();
+window.addEventListener('resize',initStars);
+
+// ─── HOME ───────────────────────────────────────────────────────────────────
+function createRoom(){
+  myName = $('inp-name').value.trim();
+  if(!myName){ showToast('⚠️ ใส่ชื่อก่อนนะ','#e74c3c'); return; }
+  roomCode = genCode();
+  isHost = true;
+  joinRoomDB();
+}
+
+function joinRoom(){
+  myName = $('inp-name').value.trim();
+  const code = $('inp-code').value.trim();
+  if(!myName){ showToast('⚠️ ใส่ชื่อก่อนนะ','#e74c3c'); return; }
+  if(code.length!==4){ showToast('⚠️ รหัสห้องต้อง 4 หลัก','#e74c3c'); return; }
+  roomCode = code;
+  isHost = false;
+  joinRoomDB();
+}
+
+async function joinRoomDB(){
+  roomRef = ref(db, 'rooms/'+roomCode);
+  const snap = await get(roomRef);
+
+  if(!snap.exists() && !isHost){
+    showToast('❌ ไม่พบห้องนี้','#e74c3c'); return;
+  }
+
+  // Write player entry
+  await set(ref(db, `rooms/${roomCode}/players/${myId}`), {
+    name: myName,
+    score: 0,
+    ready: false,
+    powerUps: {freeze:1, swap:1, blind:1},
+    effects: {}
+  });
+
+  // Host initializes room
+  if(isHost){
+    await update(ref(db, `rooms/${roomCode}`), {
+      host: myId,
+      status: 'lobby',
+      round: 0,
+      queue: shuffle(ITEMS).slice(0, TOTAL_ROUNDS).map(i=>({
+        icon:i.icon, name:i.name, hint:i.hint, zone:i.zone, fact:i.fact
+      }))
+    });
+    $('start-btn').style.display = 'flex';
+  } else {
+    $('start-btn').style.display = 'none';
+  }
+
+  $('room-code-display').textContent = roomCode;
+  setScreen('lobby');
+  listenLobby();
+}
+
+function listenLobby(){
+  listenDb(`rooms/${roomCode}/players`, snap=>{
+    const players = snap.val() || {};
+    const list = $('player-list');
+    list.innerHTML = '';
+    Object.entries(players).forEach(([id, p])=>{
+      const div = document.createElement('div');
+      div.className = 'player-chip' + (id===myId?' me':'');
+      div.innerHTML = `<span class="pchip-emoji">${getAvatar(id)}</span> ${p.name}${id===myId?' (คุณ)':''}`;
+      list.appendChild(div);
+    });
+  });
+
+  listenDb(`rooms/${roomCode}/status`, snap=>{
+    if(snap.val()==='playing') startGameClient();
+  });
+}
+
+function getAvatar(id){
+  const a=['🚀','🌍','⭐','🌙','☄️','🔭','🪐','💫'];
+  let h=0; for(let c of id) h=(h<<5)-h+c.charCodeAt(0);
+  return a[Math.abs(h)%a.length];
+}
+
+async function startGame(){
+  if(!isHost) return;
+  await update(ref(db, `rooms/${roomCode}`), {status:'playing', round:0, roundStart: Date.now()});
+}
+
+// ─── GAME ──────────────────────────────────────────────────────────────────
+function startGameClient(){
+  stopListeners();
+  setScreen('game');
+  listenGame();
+}
+
+function listenGame(){
+  // Listen round changes
+  listenDb(`rooms/${roomCode}/round`, snap=>{
+    const r = snap.val();
+    if(r === null) return;
+    currentRound = r;
+    loadRound(r);
+  });
+
+  // Listen effects on me
+  listenDb(`rooms/${roomCode}/players/${myId}/effects`, snap=>{
+    const fx = snap.val() || {};
+    const now = Date.now();
+    if(fx.freeze && fx.freeze > now){
+      frozenUntil = fx.freeze;
+      showEffect('🧊 โดนฟรีซ! หยุดนิ่ง...','#4dd9f0');
+    }
+    if(fx.swap){
+      swappedThisRound = true;
+      showEffect('🔄 โดนสลับปุ่ม!','#f1c40f');
+    }
+    if(fx.blind){
+      blindThisRound = true;
+      $('item-name').textContent = '???';
+      showEffect('👁️ โดนบอด! ดูไม่ออก!','#e74c3c');
+    }
+  });
+
+  // Listen scores for leaderboard
+  listenDb(`rooms/${roomCode}/players`, snap=>{
+    updateLeaderboard(snap.val()||{});
+  });
+
+  // Listen room end
+  listenDb(`rooms/${roomCode}/status`, snap=>{
+    if(snap.val()==='ended') showResult();
+  });
+}
+
+async function loadRound(roundIdx){
+  roundAnswered = false;
+  transitioning = true;
+  swappedThisRound = false;
+  blindThisRound = false;
+  clearInterval(timerInt);
+
+  // Show transition overlay — lock buttons
+  showTransition(roundIdx);
+
+  // Clear my effects
+  await set(ref(db, `rooms/${roomCode}/players/${myId}/effects`), {});
+
+  const snap = await get(ref(db, `rooms/${roomCode}/queue`));
+  gameQueue = snap.val() || [];
+
+  if(roundIdx >= gameQueue.length){
+    if(isHost) await update(ref(db,`rooms/${roomCode}`),{status:'ended'});
+    return;
+  }
+
+  const item = gameQueue[roundIdx];
+  $('round-num').textContent = `${roundIdx+1}/${gameQueue.length}`;
+
+  // Wait 2s showing transition, then reveal question
+  setTimeout(()=>{
+    hideTransition();
+    transitioning = false;
+
+    $('item-icon').textContent = item.icon;
+    $('item-name').textContent = item.name;
+    $('item-hint').textContent = item.hint;
+
+    // Setup buttons (possibly swapped)
+    updateZoneButtons(false);
+
+    // Start timer
+    timeLeft = 8;
+    updateTimerArc(1);
+    $('timer-num').textContent = '8';
+    timerInt = setInterval(()=>{
+      if(Date.now() < frozenUntil) return;
+      timeLeft -= .1;
+      updateTimerArc(timeLeft/8);
+      $('timer-num').textContent = Math.ceil(Math.max(0,timeLeft));
+      if(timeLeft<=0){
+        clearInterval(timerInt);
+        if(!roundAnswered) timeUp(item);
+      }
+    }, 100);
+  }, 2000);
+}
+
+function showTransition(roundIdx){
+  const ov = $('transition-overlay');
+  $('trans-round').textContent = `ข้อ ${roundIdx+1}`;
+  // countdown 2→1
+  $('trans-count').textContent = '2';
+  ov.classList.add('show');
+  let c = 2;
+  const ci = setInterval(()=>{
+    c--;
+    if(c<=0){ clearInterval(ci); return; }
+    $('trans-count').textContent = c;
+  }, 1000);
+}
+
+function hideTransition(){
+  $('transition-overlay').classList.remove('show');
+}
+
+function updateZoneButtons(swapped){
+  const left  = swapped ? 'space' : 'earth';
+  const right = swapped ? 'earth' : 'space';
+  $('zone-left').dataset.zone  = left;
+  $('zone-right').dataset.zone = right;
+  $('zone-left').querySelector('.z-title').textContent  = left==='earth'?'🌍 TERRA':'🌌 COSMOS';
+  $('zone-right').querySelector('.z-title').textContent = right==='earth'?'🌍 TERRA':'🌌 COSMOS';
+  $('zone-left').className  = 'zone ' + left;
+  $('zone-right').className = 'zone ' + right;
+}
+
+function updateTimerArc(pct){
+  const offset = 100 - (Math.max(0,pct)*100);
+  const arc = $('timer-arc');
+  arc.style.strokeDashoffset = offset;
+  arc.style.stroke = pct>.5?'rgba(255,255,255,.7)':pct>.25?'#f1c40f':'#e74c3c';
+}
+
+async function pickZone(side){
+  if(roundAnswered || transitioning) return;
+  if(Date.now() < frozenUntil){ showToast('🧊 โดนฟรีซ!','#4dd9f0',1000); return; }
+
+  // Apply swap
+  const actualSide = swappedThisRound ? (side==='earth'?'space':'earth') : side;
+
+  roundAnswered = true;
+  clearInterval(timerInt);
+
+  const item = gameQueue[currentRound];
+  const correct = actualSide === item.zone;
+
+  if(correct){
+    // Speed bonus: faster = more points
+    const speedBonus = Math.ceil(timeLeft/2);
+    const pts = 10 + speedBonus;
+    myScore += pts;
+    await update(ref(db,`rooms/${roomCode}/players/${myId}`), {score: myScore});
+
+    const btn = side==='earth' ? $('zone-left') : $('zone-right');
+    const r = btn.getBoundingClientRect();
+    spawnParticles(r.left+r.width/2, r.top+r.height/2, correct?'#27ae60':'#8e44ad');
+
+    showFeedback(true, item.fact, pts);
+    awardPowerUp();
+  } else {
+    myScore = Math.max(0, myScore-3);
+    await update(ref(db,`rooms/${roomCode}/players/${myId}`), {score: myScore});
+    showFeedback(false, item.fact, -3);
+  }
+
+  // Host advances round after 2.8s
+  if(isHost){
+    setTimeout(async()=>{
+      const next = currentRound+1;
+      if(next >= gameQueue.length){
+        await update(ref(db,`rooms/${roomCode}`),{status:'ended'});
+      } else {
+        await update(ref(db,`rooms/${roomCode}`),{round:next, roundStart:Date.now()});
+      }
+    }, 2800);
+  }
+}
+
+function timeUp(item){
+  roundAnswered = true;
+  showFeedback(false, '⏰ หมดเวลา! — '+item.fact, 0);
+  if(isHost){
+    setTimeout(async()=>{
+      const next = currentRound+1;
+      if(next >= gameQueue.length){
+        await update(ref(db,`rooms/${roomCode}`),{status:'ended'});
+      } else {
+        await update(ref(db,`rooms/${roomCode}`),{round:next, roundStart:Date.now()});
+      }
+    },2800);
+  }
+}
+
+function showFeedback(ok, fact, pts){
+  const fb = $('feedback-banner');
+  fb.className = 'fb-banner ' + (ok?'ok':'bad');
+  fb.innerHTML = ok
+    ? `<span>✅ ถูก!</span> <span class="fb-pts">+${pts}</span><div class="fb-fact">${fact}</div>`
+    : `<span>❌ ผิด!</span>${pts!==0?`<span class="fb-pts">${pts}</span>`:''}<div class="fb-fact">${fact}</div>`;
+  fb.classList.add('show');
+  setTimeout(()=>fb.classList.remove('show'), 2600);
+}
+
+function showEffect(msg, color){
+  const el = $('effect-alert');
+  el.textContent = msg;
+  el.style.color = color;
+  el.style.borderColor = color;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2000);
+}
+
+function awardPowerUp(){
+  // 40% chance on correct answer
+  if(Math.random() < 0.4){
+    const pu = POWER_UPS[Math.floor(Math.random()*POWER_UPS.length)];
+    myPowerUps[pu.id] = (myPowerUps[pu.id]||0)+1;
+    renderPowerUps();
+    showToast(`🎁 ได้รับ ${pu.icon} ${pu.name}!`, pu.color);
+  }
+}
+
+function renderPowerUps(){
+  POWER_UPS.forEach(pu=>{
+    const btn = $('pu-'+pu.id);
+    if(btn){
+      btn.querySelector('.pu-count').textContent = myPowerUps[pu.id]||0;
+      btn.disabled = !(myPowerUps[pu.id]>0);
+    }
+  });
+}
+
+// POWER UP: pick target from leaderboard
+let pendingPowerUp = null;
+
+async function usePowerUp(puId){
+  if(!(myPowerUps[puId]>0)){ showToast('ไม่มี power-up นี้แล้ว','#e74c3c'); return; }
+
+  // Get players
+  const snap = await get(ref(db,`rooms/${roomCode}/players`));
+  const players = snap.val()||{};
+  const others = Object.entries(players).filter(([id])=>id!==myId);
+  if(!others.length){ showToast('ไม่มีคนอื่นในห้อง','#e74c3c'); return; }
+
+  // Show target picker
+  pendingPowerUp = puId;
+  const picker = $('target-picker');
+  const list = $('target-list');
+  list.innerHTML='';
+  others.forEach(([id,p])=>{
+    const btn = document.createElement('button');
+    btn.className='target-btn';
+    btn.innerHTML=`${getAvatar(id)} ${p.name}`;
+    btn.onclick=()=>applyPowerUp(puId, id, p.name);
+    list.appendChild(btn);
+  });
+  picker.classList.add('show');
+}
+
+async function applyPowerUp(puId, targetId, targetName){
+  $('target-picker').classList.remove('show');
+  myPowerUps[puId]--;
+  renderPowerUps();
+
+  const pu = POWER_UPS.find(p=>p.id===puId);
+  let effect = {};
+
+  if(puId==='freeze')  effect = {freeze: Date.now()+3000};
+  if(puId==='swap')    effect = {swap: true};
+  if(puId==='blind')   effect = {blind: true};
+
+  await update(ref(db,`rooms/${roomCode}/players/${targetId}/effects`), effect);
+  showToast(`${pu.icon} ใช้ ${pu.name} กับ ${targetName}!`, pu.color);
+}
+
+// ─── LEADERBOARD ───────────────────────────────────────────────────────────
+function updateLeaderboard(players){
+  const sorted = Object.entries(players).sort((a,b)=>b[1].score-a[1].score);
+  const board = $('leaderboard');
+  board.innerHTML='';
+  sorted.forEach(([id,p],i)=>{
+    const div=document.createElement('div');
+    div.className='lb-row'+(id===myId?' me':'');
+    div.innerHTML=`
+      <span class="lb-rank">${['🥇','🥈','🥉'][i]||'#'+(i+1)}</span>
+      <span class="lb-name">${getAvatar(id)} ${p.name}</span>
+      <span class="lb-score">${p.score||0}</span>
+    `;
+    board.appendChild(div);
+  });
+
+  // Update my score display
+  $('my-score').textContent = players[myId]?.score || 0;
+}
+
+// ─── RESULT ────────────────────────────────────────────────────────────────
+async function showResult(){
+  clearInterval(timerInt);
+  setScreen('result');
+
+  const snap = await get(ref(db,`rooms/${roomCode}/players`));
+  const players = snap.val()||{};
+  const sorted = Object.entries(players).sort((a,b)=>b[1].score-a[1].score);
+
+  const podium=$('podium');
+  podium.innerHTML='';
+  sorted.slice(0,3).forEach(([id,p],i)=>{
+    const div=document.createElement('div');
+    div.className='podium-card'+(id===myId?' me':'');
+    div.innerHTML=`
+      <div class="pod-rank">${['🥇','🥈','🥉'][i]}</div>
+      <div class="pod-avatar">${getAvatar(id)}</div>
+      <div class="pod-name">${p.name}</div>
+      <div class="pod-score">${p.score||0}</div>
+    `;
+    podium.appendChild(div);
+  });
+
+  const winner = sorted[0];
+  if(winner && winner[0]===myId){
+    $('result-msg').textContent = '🏆 คุณชนะ! เก่งมาก!';
+    startConfetti();
+  } else {
+    $('result-msg').textContent = `🥇 ${winner[1].name} ชนะ! ${winner[1].score} คะแนน`;
+  }
+}
+
+function startConfetti(){
+  const colors=['#f1c40f','#27ae60','#8e44ad','#4dd9f0','#e74c3c','#fff'];
+  confettiInterval = setInterval(()=>{
+    for(let i=0;i<6;i++){
+      const p=document.createElement('div');
+      p.className='confetti';
+      p.style.cssText=`left:${Math.random()*100}vw;
+        background:${colors[Math.floor(Math.random()*colors.length)]};
+        animation-duration:${1.5+Math.random()*2}s;
+        animation-delay:${Math.random()*.5}s;`;
+      document.body.appendChild(p);
+      setTimeout(()=>p.remove(),3000);
+    }
+  },200);
+  setTimeout(()=>clearInterval(confettiInterval),5000);
+}
+
+async function leaveRoom(){
+  clearInterval(timerInt);
+  clearInterval(confettiInterval);
+  stopListeners();
+  await remove(ref(db,`rooms/${roomCode}/players/${myId}`));
+  // If host, clean up room
+  if(isHost) await remove(ref(db,`rooms/${roomCode}`));
+  myScore=0; myPowerUps={freeze:1,swap:1,blind:1};
+  setScreen('home');
+}
+
+// ─── KEYBOARD ──────────────────────────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft')  pickZone('earth');
+  if(e.key==='ArrowRight') pickZone('space');
+});
+
+// Expose to global
+window.createRoom=createRoom; window.joinRoom=joinRoom; window.startGame=startGame;
+window.pickZone=pickZone; window.usePowerUp=usePowerUp; window.leaveRoom=leaveRoom;
+window.closePicker=()=>$('target-picker').classList.remove('show');
+</script>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --earth:#27ae60;--earth-d:rgba(39,174,96,.15);--earth-g:rgba(39,174,96,.35);
+  --space:#8e44ad;--space-d:rgba(142,68,173,.15);--space-g:rgba(142,68,173,.35);
+  --gold:#f1c40f;--bg:#08080f;--white:#eef2ff;--dim:rgba(238,242,255,.45);
+  --card:rgba(255,255,255,.05);--border:rgba(255,255,255,.1);
+}
+body{font-family:'Mitr',sans-serif;background:var(--bg);color:var(--white);
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  overflow:hidden;position:relative}
+#stars{position:fixed;inset:0;z-index:0;pointer-events:none}
+
+/* ── SCREENS ── */
+.screen{position:fixed;inset:0;z-index:10;display:none;flex-direction:column;
+  align-items:center;justify-content:center;padding:16px;overflow-y:auto}
+.screen.active{display:flex}
+
+/* ── HOME ── */
+#screen-home{
+  background:radial-gradient(ellipse at 20% 30%,rgba(39,174,96,.15),transparent 50%),
+             radial-gradient(ellipse at 80% 70%,rgba(142,68,173,.15),transparent 50%),
+             var(--bg);
+}
+.home-logo{font-family:'Bebas Neue',cursive;font-size:13px;letter-spacing:5px;
+  color:var(--dim);margin-bottom:12px;text-align:center}
+.home-title{font-family:'Bebas Neue',cursive;font-size:min(52px,12vw);
+  letter-spacing:4px;line-height:1;text-align:center;margin-bottom:6px}
+.t-earth{color:var(--earth);text-shadow:0 0 30px var(--earth-g)}
+.t-space{color:var(--space);text-shadow:0 0 30px var(--space-g)}
+.home-sub{font-size:13px;color:var(--dim);text-align:center;margin-bottom:24px;line-height:1.6}
+
+.card-box{background:var(--card);border:1px solid var(--border);border-radius:20px;
+  padding:20px;width:100%;max-width:380px;margin-bottom:12px;backdrop-filter:blur(12px)}
+.card-box h3{font-family:'Bebas Neue',cursive;font-size:16px;letter-spacing:2px;
+  color:var(--dim);margin-bottom:12px;text-align:center}
+.inp{width:100%;background:rgba(255,255,255,.07);border:1px solid var(--border);
+  border-radius:10px;padding:11px 14px;color:var(--white);font-family:'Mitr',sans-serif;
+  font-size:14px;margin-bottom:10px;outline:none;transition:border-color .2s}
+.inp:focus{border-color:rgba(255,255,255,.3)}
+.inp-row{display:flex;gap:8px}
+.inp-row .inp{margin-bottom:0}
+.btn{font-family:'Bebas Neue',cursive;font-size:15px;letter-spacing:2px;
+  padding:11px 24px;border:none;border-radius:10px;cursor:pointer;
+  transition:transform .15s,box-shadow .15s;white-space:nowrap}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.btn.primary{background:linear-gradient(135deg,var(--earth),#1a5c35);color:#fff}
+.btn.secondary{background:linear-gradient(135deg,var(--space),#5a1e7a);color:#fff}
+.btn.ghost{background:rgba(255,255,255,.08);border:1px solid var(--border);color:var(--white)}
+.btn.full{width:100%}
+.btn.sm{font-size:13px;padding:8px 16px}
+.btn:disabled{opacity:.4;cursor:default;transform:none!important}
+
+/* ── LOBBY ── */
+#screen-lobby{background:var(--bg)}
+.lobby-wrap{width:100%;max-width:420px;text-align:center}
+.lobby-code{font-family:'Bebas Neue',cursive;font-size:58px;letter-spacing:8px;
+  color:var(--gold);text-shadow:0 0 20px rgba(241,196,15,.4);line-height:1;margin:8px 0}
+.lobby-label{font-size:12px;color:var(--dim);letter-spacing:2px;margin-bottom:20px}
+.player-list{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:20px}
+.player-chip{background:var(--card);border:1px solid var(--border);border-radius:30px;
+  padding:8px 16px;font-size:13px;display:flex;align-items:center;gap:6px}
+.player-chip.me{border-color:var(--gold);color:var(--gold)}
+.pchip-emoji{font-size:18px}
+
+/* ── GAME ── */
+#screen-game{background:var(--bg);padding:10px;justify-content:flex-start;gap:0}
+.game-wrap{width:100%;max-width:640px;display:flex;flex-direction:column;gap:8px;
+  height:100%;max-height:680px}
+
+/* Top bar */
+.top-bar{display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.top-left{display:flex;align-items:center;gap:8px}
+.round-badge{font-family:'Bebas Neue',cursive;font-size:13px;letter-spacing:1px;
+  color:var(--dim);padding:4px 10px;background:var(--card);border-radius:20px;
+  border:1px solid var(--border)}
+.score-badge{font-family:'Bebas Neue',cursive;font-size:18px;color:var(--gold);
+  padding:4px 12px;background:rgba(241,196,15,.1);border-radius:20px;
+  border:1px solid rgba(241,196,15,.3)}
+
+/* Leaderboard mini */
+.lb-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:8px 12px;flex-shrink:0}
+.lb-row{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:12px}
+.lb-row.me{color:var(--gold)}
+.lb-rank{width:24px;text-align:center;font-size:14px}
+.lb-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-score{font-family:'Bebas Neue',cursive;font-size:15px;color:var(--gold)}
+
+/* Question card */
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:20px;
+  padding:16px 20px 12px;text-align:center;position:relative;overflow:hidden;
+  flex-shrink:0;backdrop-filter:blur(10px)}
+.q-timer-ring{position:absolute;top:10px;right:12px;width:34px;height:34px}
+.q-timer-ring svg{transform:rotate(-90deg)}
+#timer-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:'Bebas Neue',cursive;font-size:12px;color:rgba(255,255,255,.6)}
+#item-icon{font-size:46px;display:block;margin-bottom:6px;
+  animation:iconFloat 2.5s ease-in-out infinite}
+@keyframes iconFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+#item-name{font-family:'Bebas Neue',cursive;font-size:28px;letter-spacing:2px;
+  line-height:1.1;margin-bottom:4px}
+#item-hint{font-size:11px;color:var(--dim);font-weight:300}
+
+/* Zones */
+.zones{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex-shrink:0}
+.zone{border-radius:16px;padding:14px 12px;display:flex;flex-direction:column;
+  align-items:center;gap:4px;cursor:pointer;border:2px solid;transition:all .15s;
+  min-height:72px;justify-content:center;position:relative;overflow:hidden}
+.zone.earth{background:var(--earth-d);border-color:rgba(39,174,96,.4)}
+.zone.space{background:var(--space-d);border-color:rgba(142,68,173,.4)}
+.zone.earth:hover{border-color:var(--earth);box-shadow:0 0 24px var(--earth-g)}
+.zone.space:hover{border-color:var(--space);box-shadow:0 0 24px var(--space-g)}
+.z-icon{font-size:26px}
+.z-title{font-family:'Bebas Neue',cursive;font-size:18px;letter-spacing:1px}
+.zone.earth .z-title{color:var(--earth)}
+.zone.space .z-title{color:var(--space)}
+.zone.pulse-ok{animation:pulseOk .5s ease}
+.zone.pulse-bad{animation:pulseBad .5s ease}
+@keyframes pulseOk{0%{transform:scale(1)}40%{transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes pulseBad{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* Power-ups */
+.pu-row{display:flex;gap:6px;justify-content:center;flex-shrink:0}
+.pu-btn{background:rgba(255,255,255,.06);border:1px solid var(--border);
+  border-radius:12px;padding:8px 12px;cursor:pointer;transition:all .15s;
+  display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;max-width:90px}
+.pu-btn:hover:not(:disabled){transform:translateY(-2px);background:rgba(255,255,255,.1)}
+.pu-btn:disabled{opacity:.35;cursor:default}
+.pu-icon{font-size:20px}
+.pu-label{font-size:10px;color:var(--dim);font-weight:300}
+.pu-count{font-family:'Bebas Neue',cursive;font-size:14px;color:var(--gold)}
+
+/* Feedback banner */
+.fb-banner{position:fixed;bottom:-80px;left:50%;transform:translateX(-50%);
+  background:rgba(10,10,20,.95);border:1.5px solid;border-radius:16px;
+  padding:12px 20px;text-align:center;z-index:200;min-width:260px;max-width:360px;
+  backdrop-filter:blur(16px);transition:bottom .25s ease;pointer-events:none}
+.fb-banner.show{bottom:20px}
+.fb-banner.ok{border-color:#27ae60;color:#2ecc71}
+.fb-banner.bad{border-color:#e74c3c;color:#e74c3c}
+.fb-pts{font-family:'Bebas Neue',cursive;font-size:20px;margin-left:8px}
+.fb-fact{font-size:12px;color:var(--dim);margin-top:4px;font-weight:300;line-height:1.5}
+
+/* Effect alert */
+#effect-alert{position:fixed;top:70px;left:50%;transform:translateX(-50%) scale(0);
+  background:rgba(0,0,0,.9);border:1.5px solid;border-radius:12px;
+  padding:10px 20px;font-size:14px;font-weight:600;z-index:300;
+  backdrop-filter:blur(12px);transition:transform .2s cubic-bezier(.175,.885,.32,1.275)}
+#effect-alert.show{transform:translateX(-50%) scale(1)}
+
+/* Target picker */
+#target-picker{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.75);
+  display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+#target-picker.show{display:flex}
+.picker-card{background:#111;border:1px solid var(--border);border-radius:20px;
+  padding:24px;width:100%;max-width:320px;text-align:center}
+.picker-card h3{font-family:'Bebas Neue',cursive;font-size:18px;letter-spacing:2px;
+  margin-bottom:16px;color:var(--gold)}
+#target-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.target-btn{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:12px;color:var(--white);font-family:'Mitr',sans-serif;font-size:14px;
+  cursor:pointer;transition:all .15s}
+.target-btn:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3)}
+
+/* Key hint */
+.key-hint{font-size:11px;color:var(--dim);text-align:center;flex-shrink:0;
+  display:flex;gap:10px;justify-content:center;align-items:center}
+.kb{background:rgba(255,255,255,.07);border:1px solid var(--border);
+  border-radius:5px;padding:2px 8px;font-family:'Bebas Neue',cursive;
+  font-size:12px;letter-spacing:1px}
+
+/* ── RESULT ── */
+#screen-result{background:var(--bg)}
+.result-wrap{width:100%;max-width:460px;text-align:center}
+.result-title{font-family:'Bebas Neue',cursive;font-size:40px;letter-spacing:4px;
+  background:linear-gradient(90deg,var(--earth),var(--space));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:6px}
+#result-msg{font-size:15px;color:var(--dim);margin-bottom:20px}
+.podium{display:flex;gap:12px;justify-content:center;margin-bottom:24px;align-items:flex-end}
+.podium-card{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:14px 16px;text-align:center;flex:1;max-width:130px}
+.podium-card.me{border-color:var(--gold);box-shadow:0 0 20px rgba(241,196,15,.2)}
+.pod-rank{font-size:28px;margin-bottom:4px}
+.pod-avatar{font-size:28px;margin-bottom:4px}
+.pod-name{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4px}
+.pod-score{font-family:'Bebas Neue',cursive;font-size:22px;color:var(--gold)}
+
+/* ── TOAST ── */
+#toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-80px);
+  background:rgba(10,10,20,.92);border:1px solid var(--border);border-radius:30px;
+  padding:8px 20px;font-size:13px;z-index:500;backdrop-filter:blur(12px);
+  transition:transform .3s ease;pointer-events:none;white-space:nowrap}
+#toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ── CONFETTI ── */
+.confetti{position:fixed;top:-10px;width:8px;height:8px;border-radius:2px;
+  animation:confettiFall linear forwards;z-index:999;pointer-events:none}
+@keyframes confettiFall{to{top:110vh;transform:rotate(720deg) translateX(50px)}}
+
+/* ── PARTICLES ── */
+.particle{position:fixed;border-radius:50%;pointer-events:none;z-index:100;
+  animation:ptFly .8s ease-out forwards;transform:translate(-50%,-50%)}
+@keyframes ptFly{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  100%{opacity:0;transform:translate(calc(-50% + var(--tx)),calc(-50% + var(--ty))) scale(0)}}
+/* ── TRANSITION OVERLAY ── */
+#transition-overlay{
+  position:fixed;inset:0;z-index:350;
+  background:rgba(5,5,15,0.92);
+  backdrop-filter:blur(16px);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;
+  transition:opacity .3s ease;
+}
+#transition-overlay.show{
+  opacity:1;pointer-events:all;
+}
+.trans-inner{
+  text-align:center;
+  animation:transIn .3s cubic-bezier(.175,.885,.32,1.275);
+}
+@keyframes transIn{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+.trans-label{
+  font-size:13px;color:var(--dim);letter-spacing:3px;
+  font-family:'Bebas Neue',cursive;margin-bottom:12px;
+}
+.trans-round{
+  font-family:'Bebas Neue',cursive;font-size:18px;
+  color:var(--gold);letter-spacing:2px;margin-bottom:8px;
+}
+.trans-count{
+  font-family:'Bebas Neue',cursive;
+  font-size:96px;line-height:1;
+  background:linear-gradient(135deg,var(--earth),var(--space));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:countPulse 1s ease-in-out infinite;
+  margin-bottom:16px;
+}
+@keyframes countPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.trans-bar-wrap{
+  width:200px;height:5px;background:rgba(255,255,255,.1);
+  border-radius:3px;overflow:hidden;margin:0 auto 14px;
+}
+.trans-bar{
+  height:100%;width:100%;
+  background:linear-gradient(90deg,var(--earth),var(--space));
+  border-radius:3px;
+  animation:transBarShrink 2s linear forwards;
+}
+@keyframes transBarShrink{from{width:100%}to{width:0%}}
+.trans-lock{
+  font-size:14px;font-weight:600;
+  color:rgba(255,255,255,.5);
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:30px;padding:6px 18px;
+  display:inline-block;letter-spacing:1px;
+}
+
+</style>
+
+<body>
+<canvas id="stars"></canvas>
+<div id="toast"></div>
+<div id="effect-alert"></div>
+
+<!-- HOME -->
+
+<div id="screen-home" class="screen active">
+  <div class="home-logo">MULTIPLAYER SCIENCE QUIZ</div>
+  <h1 class="home-title"><span class="t-earth">TERRA</span> <span style="opacity:.3">×</span> <span class="t-space">COSMOS</span></h1>
+  <p class="home-sub">แข่งแบบ real-time · ใช้ power-up กวนเพื่อน · ตอบให้เร็วได้คะแนนเพิ่ม</p>
+
+  <div class="card-box">
+    <h3>⌨️ ชื่อผู้เล่น</h3>
+    <input class="inp" id="inp-name" placeholder="ชื่อเล่นของคุณ" maxlength="16">
+
+```
+<h3 style="margin-top:4px">🏠 สร้างห้อง</h3>
+<button class="btn primary full" onclick="createRoom()">+ สร้างห้องใหม่</button>
+
+<h3 style="margin-top:14px">🚪 เข้าห้อง</h3>
+<div class="inp-row">
+  <input class="inp" id="inp-code" placeholder="รหัส 4 หลัก" maxlength="4" inputmode="numeric">
+  <button class="btn secondary" onclick="joinRoom()">เข้าร่วม</button>
+</div>
+```
+
+  </div>
+</div>
+
+<!-- LOBBY -->
+
+<div id="screen-lobby" class="screen">
+  <div class="lobby-wrap">
+    <div style="font-size:13px;color:var(--dim);letter-spacing:3px;margin-bottom:8px">รหัสห้อง</div>
+    <div class="lobby-code" id="room-code-display">----</div>
+    <div class="lobby-label">แชร์รหัสนี้ให้เพื่อน</div>
+    <div class="player-list" id="player-list"></div>
+    <button class="btn primary full" id="start-btn" onclick="startGame()" style="display:none;margin-bottom:10px">
+      🚀 เริ่มเกม (เฉพาะ host)
+    </button>
+    <button class="btn ghost sm" onclick="leaveRoom()">← ออกจากห้อง</button>
+  </div>
+</div>
+
+<!-- GAME -->
+
+<div id="screen-game" class="screen">
+  <div class="game-wrap">
+    <!-- Top bar -->
+    <div class="top-bar">
+      <div class="top-left">
+        <div class="round-badge">ROUND <span id="round-num">1/15</span></div>
+        <div class="score-badge">⭐ <span id="my-score">0</span></div>
+      </div>
+      <button class="btn ghost sm" onclick="leaveRoom()" style="padding:6px 12px;font-size:12px">✕ ออก</button>
+    </div>
+
+```
+<!-- Leaderboard -->
+<div class="lb-wrap" id="leaderboard"></div>
+
+<!-- Question card -->
+<div class="q-card">
+  <div class="q-timer-ring" id="timer-ring">
+    <svg viewBox="0 0 34 34" width="34" height="34">
+      <circle id="timer-track" cx="17" cy="17" r="14" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="3"/>
+      <circle id="timer-arc" cx="17" cy="17" r="14" fill="none" stroke="white" stroke-width="3"
+        stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="0"/>
+    </svg>
+    <div id="timer-num">8</div>
+  </div>
+  <span id="item-icon">🌀</span>
+  <div id="item-name">—</div>
+  <div id="item-hint">กำลังโหลด...</div>
+</div>
+
+<!-- Zones -->
+<div class="zones">
+  <div class="zone earth" id="zone-left" data-zone="earth" onclick="pickZone(this.dataset.zone)">
+    <div class="z-icon">🌍</div>
+    <div class="z-title">🌍 TERRA</div>
+  </div>
+  <div class="zone space" id="zone-right" data-zone="space" onclick="pickZone(this.dataset.zone)">
+    <div class="z-icon">🌌</div>
+    <div class="z-title">🌌 COSMOS</div>
+  </div>
+</div>
+
+<!-- Power-ups -->
+<div class="pu-row">
+  <button class="pu-btn" id="pu-freeze" onclick="usePowerUp('freeze')">
+    <div class="pu-icon">🧊</div>
+    <div class="pu-label">ฟรีซ</div>
+    <div class="pu-count">1</div>
+  </button>
+  <button class="pu-btn" id="pu-swap" onclick="usePowerUp('swap')">
+    <div class="pu-icon">🔄</div>
+    <div class="pu-label">สลับ</div>
+    <div class="pu-count">1</div>
+  </button>
+  <button class="pu-btn" id="pu-blind" onclick="usePowerUp('blind')">
+    <div class="pu-icon">👁️</div>
+    <div class="pu-label">บอด</div>
+    <div class="pu-count">1</div>
+  </button>
+</div>
+
+<!-- Key hint -->
+<div class="key-hint">
+  <span><span class="kb">←</span> TERRA</span>
+  <span style="opacity:.4">|</span>
+  <span>COSMOS <span class="kb">→</span></span>
+</div>
+```
+
+  </div>
+</div>
+
+<!-- RESULT -->
+
+<div id="screen-result" class="screen">
+  <div class="result-wrap">
+    <div class="result-title">MISSION COMPLETE</div>
+    <div id="result-msg"></div>
+    <div class="podium" id="podium"></div>
+    <button class="btn primary" onclick="leaveRoom()">🏠 กลับหน้าหลัก</button>
+  </div>
+</div>
+
+<!-- Target picker -->
+
+<div id="target-picker">
+  <div class="picker-card">
+    <h3>🎯 เลือกเป้าหมาย</h3>
+    <div id="target-list"></div>
+    <button class="btn ghost full" onclick="closePicker()">ยกเลิก</button>
+  </div>
+</div>
+
+<!-- Feedback banner -->
+
+<div class="fb-banner" id="feedback-banner"></div>
+
+<!-- Transition overlay -->
+
+<div id="transition-overlay">
+  <div class="trans-inner">
+    <div class="trans-label">⏳ กำลังเปลี่ยนคำถาม...</div>
+    <div class="trans-round" id="trans-round">ข้อ 2</div>
+    <div class="trans-count" id="trans-count">2</div>
+    <div class="trans-bar-wrap"><div class="trans-bar" id="trans-bar"></div></div>
+    <div class="trans-lock">🔒 รอก่อนนะ ห้ามตอบ!</div>
+  </div>
+</div>
+
+</body>
+</html>
